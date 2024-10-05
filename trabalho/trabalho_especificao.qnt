@@ -8,13 +8,15 @@ module rpgBattle {
                         | Druid | Bear 
                         | Sheep 
                         | Monster 
-                        | Nobody
+                        | Null 
 
     type ActionType[damage] =  Attack(int) 
+                              | Paralysis
                               | RemoveParalysis
                               | CreatesIlusion
                               | Blind
                               | WildShape
+                              | Nothing
 
     type Creature = {
         id: int,
@@ -38,22 +40,24 @@ module rpgBattle {
     // CREATURES VAL
 
     // Creatures in Start Battle
-    pure val CREATURES = Set(
+    pure val CREATURES = Map(
 
-        {id: 1, name: "Presto", hp: 20, paralysis: false, creatureType: Wizard},
-        {id: 2, name: "Hank", hp: 20, paralysis: false, creatureType: Hunter},
-        {id: 3, name: "Bobby", hp: 20, paralysis: false, creatureType: Druid},
+        1 -> {id: 1, name: "Presto", hp: 20, paralysis: false, creatureType: Wizard},
+        2 -> {id: 2, name: "Hank", hp: 20, paralysis: false, creatureType: Hunter},
+        3 -> {id: 3, name: "Bobby", hp: 20, paralysis: false, creatureType: Druid},
 
         // Monsters
-        {id: 4, name: "Gelatinous Cube", hp: 100, paralysis: false, creatureType: Monster},
-        // {id: 5, name: "Venger", hp: 100, paralysis: false, wild_shape: false, creatureType: Monster}
+        4 -> {id: 4, name: "Gelatinous Cube", hp: 100, paralysis: false, creatureType: Monster},
+        // 5 -> {id: 5, name: "Venger", hp: 100, paralysis: false, wild_shape: false, creatureType: Monster},
 
         // Animals
-        {id: -1, name: "Ilusion Sheep", hp: 1, paralysis: false, creatureType: Sheep},
-        {id: -1, name: "Dark Bear", hp: 60, paralysis: false, creatureType: Bear}
+        6 -> {id: 6, name: "Ilusion Sheep", hp: 1, paralysis: false, creatureType: Sheep},
+        7 -> {id: 7, name: "Dark Bear", hp: 60, paralysis: false, creatureType: Bear}
     )
 
     // STATUS VAR ROUND
+    var creatures: int -> Creature
+
     var druidTurnedBear: bool
     var wizardMakeIlusion: bool
 
@@ -61,8 +65,8 @@ module rpgBattle {
     var status: CombatStatus
 
     var turn: int
-
     var round: int
+
     var listInitatives: List[Iniciative]
 
     // USEFUL DEFINITIONS 
@@ -87,19 +91,44 @@ module rpgBattle {
         }
     }
 
-    // pure def monsterReciverChoice(): List[Creature] = {
-    //     // List with Bear and Sheep 
-    //     if ()
+    pure def canChooseAnimal(animalType: CreaturesType, druidTurnedBear: bool, wizardMakeIlusion: bool): bool = {
+        match animalType {
+            | Bear => druidTurnedBear and CREATURES.values().filter(c => c.creatureType == Bear and c.hp > 0).size() > 0
+            | Sheep => wizardMakeIlusion and CREATURES.values().filter(c => c.creatureType == Sheep and c.hp > 0).size() > 0
+            | _ => false
+        }
+    }
 
-    //     // List with Bear
-    //     else if ()
+    pure def monsterReciverChoice(druidTurnedBear: bool, wizardMakeIlusion: bool): Set[Creature] = {
+        // List with Bear and Sheep 
+        if (
+            canChooseAnimal(Bear, druidTurnedBear, wizardMakeIlusion)
+            and
+            canChooseAnimal(Sheep, druidTurnedBear, wizardMakeIlusion)
+        )
+            CREATURES.values().filter(c => c.creatureType != Monster)
 
-    //     // List with Sheep 
-    //     else if ()
+        // List with Bear
+        else if (canChooseAnimal(Bear, druidTurnedBear, wizardMakeIlusion))
+            CREATURES.values().filter(c => c.creatureType != Monster and c.creatureType != Sheep)
 
-    //     else
-    // }
+        // List with Sheep 
 
+        else if (canChooseAnimal(Sheep, druidTurnedBear, wizardMakeIlusion))
+            CREATURES.values().filter(c => c.creatureType != Monster and c.creatureType != Bear)
+
+        else
+            CREATURES.values().filter(c => c.creatureType != Monster and c.creatureType != Bear and c.creatureType != Sheep)
+
+    }
+
+    pure def choiseReciver(agent: Creature, druidTurnedBear: bool, wizardMakeIlusion: bool): Set[Creature] = {
+        if(agent.creatureType == Monster)
+            monsterReciverChoice(druidTurnedBear, wizardMakeIlusion)
+        else
+            CREATURES.values().filter(c => c.creatureType == Monster)
+
+    }
 
     // ACTIONS 
 
@@ -111,7 +140,7 @@ module rpgBattle {
 
         //  Monsters 
         nondet monster1D20 = 1.to(20).oneOf()
-        // nondet monster2 = 1.to(20).oneOf()
+        // nondet monster2D20 = 1.to(20).oneOf()
 
         val initatives = List(
                          {id: 1, rollResult: wizardD20, creatureType: Wizard}, 
@@ -119,21 +148,37 @@ module rpgBattle {
                          {id: 3, rollResult: druidD20, creatureType: Druid},
 
                          {id: 4, rollResult: monster1D20, creatureType: Monster} //,
-                         // {id: 5, rollResult: monster2, cretureType: Monster}
+                         // {id: 5, rollResult: monster2D20, cretureType: Monster}
                     )
         
         listInitatives' = sortList(initatives, (x, y) => x.rollResult > y.rollResult)                                        
     }
 
-    // action choiseReciver(idAgent: Iniciative,  idReciver: Iniciative): int = {
-        
-    // }
+    action creaturAction(agent: Creature, receiver: Creature): bool = {
+        all {
+            agent != receiver,
+            agent.hp > 0,
+            receiver.hp > 0,
+
+            creatures' = creatures.setBy(receiver.id, c => damage(c, 10)),
+            status' = Combat({
+                agent: agent,
+                receiver: receiver,
+                creatureAction: Attack(10),
+            })
+        }
+    }
 
     action init = {
          all {
+            creatures' = CREATURES,
+
             status' = Start,
             round' = 0,
             turn' = 0,
+
+            druidTurnedBear' = false,
+            wizardMakeIlusion' = false,
 
             // Dice Rolls 
             diceRolls
@@ -141,13 +186,21 @@ module rpgBattle {
     }
 
     action step = {
+        val agent = creatures.get(listInitatives[round % listInitatives.length()].id)
 
-        // val agent = listInitatives[round % listInitatives.length()]
-        // val reciver = 
+        nondet receiver = choiseReciver(agent, druidTurnedBear, wizardMakeIlusion).oneOf()
+      
+        all {
+            round' = round + 1,
+            turn' = turn + 1,
+            
+            listInitatives' = listInitatives,
+            druidTurnedBear' = druidTurnedBear,
+            wizardMakeIlusion' = wizardMakeIlusion,
 
-        turn' = turn + 1
+            creaturAction(agent, receiver)
+        }
     }
         
-    val inv_start_test = not(turn > 0)
-
+    val inv_start_test = not(turn > 3)
 }
