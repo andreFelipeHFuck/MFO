@@ -8,7 +8,6 @@ module rpgBattle {
                         | Druid | Bear 
                         | Sheep 
                         | Monster 
-                        | Null 
 
     type ActionType[damage] =  Attack(int) 
                               | Paralysis
@@ -18,11 +17,16 @@ module rpgBattle {
                               | WildShape
                               | Skip
 
+    type Ability = Active | Deactivated | Empty
+
     type Creature = {
         id: int,
         name: str,
         hp: int,
         paralysis: bool,
+        blind: Ability,
+        wildShape: Ability,
+        ilusion: Ability,
         creatureType: CreaturesType
     }
 
@@ -37,8 +41,6 @@ module rpgBattle {
     type Turn = {
         num: int,
         round: int,
-        bear: bool,
-        sheep: bool
     }
 
     type Iniciative = {id:int, rollResult: int, creatureType: CreaturesType}
@@ -51,17 +53,17 @@ module rpgBattle {
     // Creatures in Start Battle
     pure val CREATURES = Map(
 
-        1 -> {id: 1, name: "Presto", hp: 20, paralysis: false, creatureType: Wizard},
-        2 -> {id: 2, name: "Hank", hp: 20, paralysis: false, creatureType: Hunter},
-        3 -> {id: 3, name: "Bobby", hp: 20, paralysis: false, creatureType: Druid},
+        1 -> {id: 1, name: "Presto", hp: 20, paralysis: false, blind: Empty, wildShape: Empty, ilusion: Deactivated, creatureType: Wizard},
+        2 -> {id: 2, name: "Hank", hp: 20, paralysis: false, blind: Deactivated, wildShape: Empty, ilusion: Empty, creatureType: Hunter},
+        3 -> {id: 3, name: "Bobby", hp: 20, paralysis: false, blind: Empty, wildShape: Deactivated, ilusion: Empty,  creatureType: Druid},
 
         // Monsters
-        4 -> {id: 4, name: "Gelatinous Cube", hp: 100, paralysis: false, creatureType: Monster},
-        // 5 -> {id: 5, name: "Venger", hp: 100, paralysis: false, wild_shape: false, creatureType: Monster},
+        4 -> {id: 4, name: "Gelatinous Cube", hp: 100, paralysis: false, blind: Empty, wildShape: Empty, ilusion: Empty, creatureType: Monster},
+        // 5 -> {id: 5, name: "Venger", hp: 100, paralysis: false, blind: Empty, wildShape: Empty, ilusion: Empty, creatureType: Monster},
 
         // Animals
-        6 -> {id: 6, name: "Ilusion Sheep", hp: 1, paralysis: false, creatureType: Sheep},
-        7 -> {id: 7, name: "Dark Bear", hp: 60, paralysis: false, creatureType: Bear}
+        6 -> {id: 6, name: "Ilusion Sheep", hp: 1, paralysis: false, blind: Empty, wildShape: Empty, ilusion: Empty, creatureType: Sheep},
+        7 -> {id: 7, name: "Dark Bear", hp: 60, paralysis: false, blind: Empty, wildShape: Empty, ilusion: Empty, creatureType: Bear}
     )
 
     // STATUS VAR ROUND
@@ -77,7 +79,7 @@ module rpgBattle {
     // USEFUL DEFINITIONS 
 
     pure def newTurn(turn: Turn): Turn = {
-        {...turn, num: turn.num + 1, round: 0}
+        {num: turn.num + 1, round: 0}
     }
 
     pure def newRound(turn: Turn): Turn = {
@@ -92,12 +94,20 @@ module rpgBattle {
         {...c, paralysis: true}
     }
 
-    pure def alterStatusSheep(ilusion: bool): bool = {
-        not(ilusion)
+    pure def createIlusion(wizard: Creature): Creature = {
+        {...wizard, ilusion: Active}
     }
 
-    pure def alterStatusBear(bear: bool): bool = {
-        not(bear)
+    pure def getIlusionStatus(wizard: Creature): bool = {
+        wizard.ilusion == Active
+    }
+
+    pure def activeWildShape(druid: Creature): Creature = {
+        {...druid, wildShape: Active}
+    }
+
+    pure def getWildShapeStatus(druid: Creature): bool = {
+        druid.wildShape == Active
     }
 
     pure def restartAnimalsAtributs(c: Creature): Creature = {
@@ -131,7 +141,7 @@ module rpgBattle {
 
         // List with Sheep 
         else if (canChooseAnimal(Sheep, druidTurnedBear, wizardMakeIlusion))
-            CREATURES.values().filter(c => c.creatureType != Sheep)
+            CREATURES.values().filter(c => c.creatureType == Sheep)
 
         else
             CREATURES.values().filter(c => c.creatureType != Monster and c.creatureType != Bear and c.creatureType != Sheep and c.hp > 0)
@@ -148,10 +158,14 @@ module rpgBattle {
     // ACTIONS 
 
     action updateTurn: bool = {
-        if (turn.round == listInitatives.length())
-            turn' = newTurn(turn)
-        else
-            turn' = newRound(turn)
+        all{
+            if (turn.round == listInitatives.length()) 
+                turn' = newTurn(turn)
+                // creatures' = creatures.setBy(6, s => restartAnimalsAtributs(s)).setBy(7, b => restartAnimalsAtributs(b))
+            else
+                turn' = newRound(turn)
+                // creatures' = creatures
+        }
     }
 
     action diceRolls = {
@@ -193,12 +207,14 @@ module rpgBattle {
         }
     }
 
+
     action monsterAttack(attacker: Creature, receiver: Creature): bool = {
         if(turn.num == 0)
             attack(attacker, receiver, 10)
         else
             attack(attacker, receiver, 20)
     }
+
 
     // PARALYSIS
     action paralysisCreature(monster: Creature, receiver: Creature): bool = {
@@ -216,10 +232,58 @@ module rpgBattle {
         }
     }
 
-    action heroAction(agent: Creature, receiver: Creature): bool = {
+    // CREATURE ILUSION
+    action createIlusionSheep(agent: Creature): bool = {
+        all {
+            creatures' = creatures.setBy(1, c => createIlusion(c)),
+            status' = Action({
+                agent: agent,
+                receiver: creatures.get(6),
+                creatureAction: CreatesIlusion
+            })
+        }
+    }
+
+    action wizardAction(agent: Creature, receiver: Creature): bool = {
+        any {
+            attack(agent, receiver, 10),
+            createIlusionSheep(agent)
+        }
+    }
+
+    action hunterAction(agent: Creature, receiver: Creature): bool = {
         any {
             attack(agent, receiver, 10)
         }
+    }
+
+    action druidAction(agent: Creature, receiver: Creature): bool = {
+        any {
+            attack(agent, receiver, 10)
+        }
+    }
+
+    action skip(agent: Creature, receiver: Creature): bool = {
+            all {
+                creatures' = creatures, 
+                status' = Action({
+                    agent: agent,
+                    receiver: receiver,
+                    creatureAction: Skip
+                })
+            }
+    }
+
+    action heroAction(agent: Creature, receiver: Creature): bool = {
+        if (agent.paralysis == false)
+            match agent.creatureType {
+                | Wizard =>  wizardAction(agent, receiver)  
+                | Hunter => hunterAction(agent, receiver)
+                | Druid => druidAction(agent, receiver)
+                | _ => attack(agent, receiver, 10)            
+            }
+        else 
+            skip(agent, receiver)
     }
 
     action monsterAction(agent: Creature, receiver: Creature): bool = {
@@ -241,7 +305,7 @@ module rpgBattle {
             creatures' = CREATURES,
 
             status' = Start,
-            turn' = {num: 0, round: 0, bear: false, sheep: false},
+            turn' = {num: 0, round: 0},
 
             // Dice Rolls 
             diceRolls
@@ -251,7 +315,11 @@ module rpgBattle {
     action step = {
         val agent = creatures.get(listInitatives[turn.round % listInitatives.length()].id)
 
-        nondet receiver = choiseReciver(agent, turn.bear, turn.sheep).oneOf()
+        val sheepStatus = getIlusionStatus(creatures.get(1))
+
+        val bearStatus = getWildShapeStatus(creatures.get(3))
+
+        nondet receiver = choiseReciver(agent, bearStatus, sheepStatus).oneOf()
       
         all {
             listInitatives' = listInitatives,
@@ -264,5 +332,12 @@ module rpgBattle {
         
     val inv_start_test = not(turn.num > 1)
 
-    val inv_creature_is_paralysi = creatures.values().exists(c => c.creatureType != Monster implies c.paralysis == true)
+
+    // INV PARALYSIS
+    val inv_creature_is_paralysi = not(creatures.values().exists(c => c.paralysis == true))
+
+    // INV SHEEP
+    val inv_create_ilusion = not(creatures.values().exists(c => c.ilusion == Active))
+
+    val inv_monster_attack_sheep = not(creatures.values().exists(c => c.creatureType == Sheep and c.hp < 0))
 }
