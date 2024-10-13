@@ -9,13 +9,14 @@ module rpgBattle {
                         | Sheep 
                         | Monster 
 
-    type ActionType[damage] =  Attack(int) 
-                              | Paralysis
+    type ActionType[damage] =  Attack(int) // v
+                              | Paralysis // V
                               | RemoveParalysis
-                              | CreatesIlusion
+                              | CreatesIlusion // V
                               | Blind
                               | WildShape
-                              | Skip
+                              | Skip // V
+                              | Dead
 
     type Ability = Active | Deactivated | Empty
 
@@ -104,7 +105,7 @@ module rpgBattle {
         {...c, paralysis: not(paralysis)}
     }
 
-    pure def skip(c: Creature, worthless: a): Creature = {
+    pure def nothing(c: Creature, worthless: a): Creature = {
         c
     }
 
@@ -170,15 +171,22 @@ module rpgBattle {
 
     }
 
-    pure def choiseReciver(agent: Creature, druidTurnedBear: bool, wizardMakeIlusion: bool): Set[Creature] = {
+    pure def choiseReciver(creatures: int -> Creature ,agent: Creature, druidTurnedBear: bool, wizardMakeIlusion: bool): Set[Creature] = {
         if(agent.creatureType == Monster)
             monsterReciverChoice(druidTurnedBear, wizardMakeIlusion)
         else
-            CREATURES.values().filter(c => c.creatureType == Monster and c.hp > 0)
+            creatures.values().filter(c => c.creatureType == Monster and c.hp > 0)
+    }
+
+    pure def choiseRemoveParalyisisCreature(creatures: int -> Creature): Set[Creature] = {
+        creatures.values().filter(c => c.creatureType != Monster 
+                                                    and c.creatureType != Sheep 
+                                                    and c.creatureType != Bear 
+                                                    and c.hp > 0 and c.paralysis == true)
     }
 
     // ACTIONS 
-    action upadteCreaturesEndTurn(creatureUpdate: Creature, creatureAction: (Creature, a) => Creature, op: a): bool = {
+    action upadateCreaturesEndTurn(creatureUpdate: Creature, creatureAction: (Creature, a) => Creature, op: a): bool = {
             creatures' = creatures.setBy(creatureUpdate.id, c => creatureAction(c, op))
                         .setBy(CREATURES_ENUM.get("SHEEP"), s => restartAnimalsAtributs(s))
                         .setBy(CREATURES_ENUM.get("BEAR"), b => restartAnimalsAtributs(b))
@@ -186,31 +194,28 @@ module rpgBattle {
                         .setBy(CREATURES_ENUM.get("DRUID"), d => activeWildShape(d, Active))
     }
 
-    action updateCreaturesTurn(creatureUpdate: Creature, creatureAction: (Creature, a) => Creature, op: a): bool = {
-         creatures' = creatures.setBy(creatureUpdate.id, c => creatureAction(c, op))
+    action updateCreaturesTurn(  agentType: CreaturesType,
+                                creatureUpdate: Creature, 
+                                creatureAction: (Creature, a) => Creature, creatureOp: a): bool = {
+
+        match agentType {
+            | Wizard => creatures' = creatures
+                                    .setBy(CREATURES_ENUM.get("WIZARD"), w => createIlusion(w, Active))
+                                    .setBy(CREATURES_ENUM.get("SHEEP"), s => restartAnimalsAtributs(s))
+                                    .setBy(creatureUpdate.id, c => creatureAction(c, creatureOp))
+            | _ =>  creatures' = creatures.setBy(creatureUpdate.id, c => creatureAction(c, creatureOp))
+        }
     }
 
-    action updateCreatures(creatureUpdate: Creature, creatureAction: ActionType): bool = {
-        // End turn
-        if (turn.round == listInitatives.length() - 1)
-            match creatureAction {
-                | Attack(damg) => upadteCreaturesEndTurn(creatureUpdate, damage, damg)
-                | Paralysis => upadteCreaturesEndTurn(creatureUpdate, paralysis, creatureUpdate.paralysis)
-                | CreatesIlusion => upadteCreaturesEndTurn(creatureUpdate, createIlusion, Deactivated)
-                | WildShape => upadteCreaturesEndTurn(creatureUpdate, activeWildShape, Deactivated)
-                | Skip => upadteCreaturesEndTurn(creatureUpdate, skip, Empty)
-                | _ => upadteCreaturesEndTurn(creatureUpdate, paralysis, creatureUpdate.paralysis)
-            }
-        else 
-            match creatureAction {
-                | Attack(damg) => updateCreaturesTurn(creatureUpdate, damage, damg)
-                | Paralysis => updateCreaturesTurn(creatureUpdate, paralysis, creatureUpdate.paralysis)
-                | CreatesIlusion => updateCreaturesTurn(creatureUpdate, createIlusion, Deactivated)
-                | WildShape => updateCreaturesTurn(creatureUpdate, activeWildShape, Deactivated)
-                | Skip => updateCreaturesTurn(creatureUpdate, skip, Empty)
-                | _ => updateCreaturesTurn(creatureUpdate, paralysis, creatureUpdate.paralysis)
-            }
-        
+    action updateCreatures(agent: Creature, receiver: Creature, creatureAction: ActionType): bool = {
+        match creatureAction {
+            | Attack(damg) => updateCreaturesTurn(agent.creatureType, receiver, damage, damg)
+            | Paralysis => updateCreaturesTurn(agent.creatureType, receiver, paralysis, receiver.paralysis)
+            | RemoveParalysis => updateCreaturesTurn(agent.creatureType, receiver, paralysis, receiver.paralysis)
+            | CreatesIlusion => updateCreaturesTurn(agent.creatureType, agent, createIlusion, Deactivated)
+            | WildShape => updateCreaturesTurn(agent.creatureType, agent, activeWildShape, Deactivated)
+            | _ => updateCreaturesTurn(agent.creatureType, agent, nothing, Empty)
+        }
     }
 
     action updateTurn: bool = {
@@ -250,7 +255,7 @@ module rpgBattle {
             attacker.hp > 0,
             receiver.hp > 0,
 
-            updateCreatures(receiver, Attack(damg)), //creatures.setBy(receiver.id, c => damage(c, damg)),
+            updateCreatures(attacker, receiver, Attack(damg)), //creatures.setBy(receiver.id, c => damage(c, damg)),
             status' = Action({
                 agent: attacker,
                 receiver: receiver,
@@ -275,7 +280,7 @@ module rpgBattle {
             monster.hp > 0,
             receiver.hp > 0, 
 
-            updateCreatures(receiver, Paralysis), //creatures.setBy(receiver.id, c => c),
+            updateCreatures(monster, receiver, Paralysis), //creatures.setBy(receiver.id, c => c),
             status' = Action({
                 agent: monster,
                 receiver: receiver,
@@ -284,11 +289,31 @@ module rpgBattle {
         }
     }
 
+    // REMOVE PARALYSIS     
+    action removeParalysisCreature(agent: Creature): bool = {
+        nondet receiver = choiseRemoveParalyisisCreature(creatures).oneOf()
+
+        all {
+            agent != receiver,
+            agent.hp > 0,
+            receiver.hp > 0, 
+            agent.paralysis == false,
+
+            updateCreatures(agent, receiver, RemoveParalysis), 
+            status' = Action({
+                agent: agent,
+                receiver: receiver,
+                creatureAction: Paralysis
+            })
+        }
+    }
+
     // CREATURE ILUSION
     action createIlusionSheep(agent: Creature): bool = {
-        val wizard = CREATURES.get(CREATURES_ENUM.get("WIZARD"))
+        val sheep= creatures.get(CREATURES_ENUM.get("SHEEP"))
         all {
-            updateCreatures(wizard, CreatesIlusion),//creatures.setBy(1, c => createIlusion(c, c.ilusion)),
+            agent.hp > 0,
+            updateCreatures(agent, sheep, CreatesIlusion),
             status' = Action({
                 agent: agent,
                 receiver: creatures.get(6),
@@ -298,27 +323,47 @@ module rpgBattle {
     }
 
     action wizardAction(agent: Creature, receiver: Creature): bool = {
-        any {
-            attack(agent, receiver, 10),
-            createIlusionSheep(agent)
-        }
+        if (choiseRemoveParalyisisCreature(creatures).size() > 0)
+            any {
+                attack(agent, receiver, 10),
+                createIlusionSheep(agent),
+                removeParalysisCreature(agent)
+            }
+        else 
+            any {
+                attack(agent, receiver, 10),
+                createIlusionSheep(agent),
+            }
     }
 
     action hunterAction(agent: Creature, receiver: Creature): bool = {
-        any {
-            attack(agent, receiver, 10)
-        }
+        if (choiseRemoveParalyisisCreature(creatures).size() > 0)
+            any {
+                attack(agent, receiver, 10),
+                removeParalysisCreature(agent)
+            }
+        else 
+            any {
+                attack(agent, receiver, 10),
+            }
     }
 
     action druidAction(agent: Creature, receiver: Creature): bool = {
-        any {
-            attack(agent, receiver, 10)
-        }
+        if (choiseRemoveParalyisisCreature(creatures).size() > 0)
+            any {
+                attack(agent, receiver, 10),
+                removeParalysisCreature(agent)
+            }
+        else 
+            any {
+                attack(agent, receiver, 10),
+            }
     }
 
+    // SKIP
     action skipTurn(agent: Creature, receiver: Creature): bool = {
             all {
-                updateCreatures(agent, Skip), //creatures, 
+                updateCreatures(agent, receiver, Skip), 
                 status' = Action({
                     agent: agent,
                     receiver: receiver,
@@ -327,16 +372,32 @@ module rpgBattle {
             }
     }
 
+    // DEAD
+    action dead(agent: Creature, receiver: Creature): bool = {
+        all {
+            updateCreatures(agent, receiver, Dead),
+            status' = Action({
+                    agent: agent,
+                    receiver: receiver,
+                    creatureAction: Dead
+                })
+        }
+    }
+
+
     action heroAction(agent: Creature, receiver: Creature): bool = {
-        if (agent.paralysis == false)
-            match agent.creatureType {
-                | Wizard =>  wizardAction(agent, receiver)  
-                | Hunter => hunterAction(agent, receiver)
-                | Druid => druidAction(agent, receiver)
-                | _ => attack(agent, receiver, 10)            
-            }
-        else 
-            skipTurn(agent, receiver)
+        if (agent.hp > 0)
+            if (agent.paralysis == false)
+                match agent.creatureType {
+                    | Wizard =>  wizardAction(agent, receiver)  
+                    | Hunter => hunterAction(agent, receiver)
+                    | Druid => druidAction(agent, receiver)
+                    | _ => attack(agent, receiver, 10)            
+                }
+            else 
+                skipTurn(agent, receiver)
+        else
+                dead(agent, receiver)
     }
 
     action monsterAction(agent: Creature, receiver: Creature): bool = {
@@ -372,7 +433,7 @@ module rpgBattle {
 
         val sheepStatus = getIlusionStatus(creatures.get(CREATURES_ENUM.get("WIZARD")))
 
-        nondet receiver = choiseReciver(agent, bearStatus, sheepStatus).oneOf()
+        nondet receiver = choiseReciver(creatures ,agent, bearStatus, sheepStatus).oneOf()
       
         all {
             listInitatives' = listInitatives,
@@ -380,11 +441,11 @@ module rpgBattle {
             updateTurn,
             
             creaturAction(agent, receiver)
-
         }
     }
-        
-    val inv_start_test = not(turn.num > 2)
+
+    // INV
+    val inv_start_test = not(turn.num > 3)
 
 
     // INV PARALYSIS
