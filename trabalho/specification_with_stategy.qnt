@@ -1,4 +1,4 @@
-// specification of rules
+// specification with strategies
 
 module rpgBattle {
 
@@ -166,6 +166,14 @@ module rpgBattle {
                                                     and c.creatureType != Bear 
                                                     and c.id != agent.id
                                                     and c.hp > 0 and c.paralysis == true)
+    }
+
+    pure def checksOthersHerosSkillsAreActivated( agent: Creature, creatures: int -> Creature): bool = {
+        creatures.values().filter(c => c.creatureType != Monster 
+                                                    and c.creatureType != Sheep 
+                                                    and c.creatureType != Bear 
+                                                    and c.id != agent.id
+                                                    and c.hp > 0 and c.skill == true).size() > 0
     }
 
     // ACTIONS 
@@ -343,44 +351,29 @@ module rpgBattle {
 
     action wizardAction(agent: Creature, receiver: Creature): bool = {
         if (choiseRemoveParalyisisCreature(agent, creatures).size() > 0)
-            any {
-                attack(agent, receiver, 10),
-                createIlusionSheep(agent),
-                removeParalysisCreature(agent)
-            }
-        else 
-            any {
-                attack(agent, receiver, 10),
-                createIlusionSheep(agent),
-            }
+            removeParalysisCreature(agent)
+        else if(not(checksOthersHerosSkillsAreActivated(agent, creatures)))
+            createIlusionSheep(agent)
+        else
+            attack(agent, receiver, 10)
     }
 
     action hunterAction(agent: Creature, receiver: Creature): bool = {
         if (choiseRemoveParalyisisCreature(agent, creatures).size() > 0)
-            any {
-                attack(agent, receiver, 10),
-                useBlindMonster(agent, receiver),
-                removeParalysisCreature(agent)
-            }
-        else 
-            any {
-                useBlindMonster(agent, receiver),
-                attack(agent, receiver, 10)
-            }
+            removeParalysisCreature(agent)
+        else if(not(checksOthersHerosSkillsAreActivated(agent, creatures)))
+            useBlindMonster(agent, receiver)
+        else
+            attack(agent, receiver, 10)
     }
 
     action druidAction(agent: Creature, receiver: Creature): bool = {
         if (choiseRemoveParalyisisCreature(agent, creatures).size() > 0)
-            any {
-                attack(agent, receiver, 10),
-                activateWildShape(agent),
-                removeParalysisCreature(agent)
-            }
-        else 
-            any {
-                activateWildShape(agent),
-                attack(agent, receiver, 10),
-            }
+           removeParalysisCreature(agent)
+        else if(not(checksOthersHerosSkillsAreActivated(agent, creatures)))
+           activateWildShape(agent)
+        else
+            attack(agent, receiver, 10)
     }
 
     // SKIP
@@ -476,19 +469,6 @@ module rpgBattle {
                                                   and turn.num == 0
                                                 | Start => false
                                            })
-
-    val inv_wizard_or_druid_abillity_skills_only_attacks_bear_or_sheep = not(match status {
-                                                                            | Action(a) => (a.creatureAction == Attack(10) or a.creatureAction == Attack(10))
-                                                                            and a.agent.creatureType == Monster 
-                                                                            and (
-                                                                                creatures.values().exists(c => c.skill == true and c.creatureType == Wizard)
-                                                                                or 
-                                                                                creatures.values().exists(c => c.skill and c.creatureType == Druid)
-                                                                            )
-                                                                            and (a.receiver.creatureType == Bear or a.receiver.creatureType == Sheep)
-                                                                            | Start => false
-                                                                         })
-
 
     // INV PARALYSIS
     val inv_creature_is_paralysi = not(creatures.values().exists(c => c.paralysis == true))
