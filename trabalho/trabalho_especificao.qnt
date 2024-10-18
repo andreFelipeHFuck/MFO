@@ -506,4 +506,32 @@ module rpgBattle {
 
     // BLIND 
     val inv_use_blind = not(creatures.values().exists(c => c.skill == true and c.creatureType == Hunter))
+
+    // INV COMBAT
+
+    // HEROS LOSE
+    val inv_heros_lose = creatures.values().exists(
+                                                c => c.creatureType == Wizard
+                                                or c.creatureType == Hunter
+                                                or c.creatureType == Druid
+                                            ) 
+                                            and 
+                        creatures.values().exists(c => c.creatureType == Monster)
+                        implies 
+                        creatures.values().forall(c => c.creatureType == Wizard implies c.hp > 0)
+                        or creatures.values().forall(c => c.creatureType == Hunter implies c.hp > 0)
+                        or creatures.values().forall(c => c.creatureType == Druid implies c.hp > 0)
+                                        
+    // HEROS WIN
+    val inv_heros_win =  creatures.values().exists(
+                                                c => c.creatureType == Wizard
+                                                or c.creatureType == Hunter
+                                                or c.creatureType == Druid
+                                            ) 
+                                            and 
+                        creatures.values().exists(c => c.creatureType == Monster)
+                        implies 
+                        creatures.values().forall(c => c.creatureType == Monster implies c.hp > 0)
+
+
 }
