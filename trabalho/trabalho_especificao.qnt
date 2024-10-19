@@ -99,8 +99,12 @@ module rpgBattle {
         {...c, hp: c.hp - d}
     }
 
-    pure def paralysis(c: Creature, paralysis: bool): Creature = {
-        {...c, paralysis: not(paralysis)}
+    pure def paralysis(c: Creature, paralysis: ActionType): Creature = {
+        match paralysis {
+            | Paralysis => {...c, paralysis: true}
+            | RemoveParalysis => {...c, paralysis: false}
+            | _ => c
+        }
     }
 
     pure def resetSkill(c: Creature, skill: bool): Creature = {
@@ -195,8 +199,8 @@ module rpgBattle {
     action updateCreatures(agent: Creature, receiver: Creature, creatureAction: ActionType): bool = {
         match creatureAction {
             | Attack(damg) => updateCreaturesTurn(agent.creatureType, receiver, damage, damg)
-            | Paralysis => updateCreaturesTurn(agent.creatureType, receiver, paralysis, receiver.paralysis)
-            | RemoveParalysis => updateCreaturesTurn(agent.creatureType, receiver, paralysis, receiver.paralysis)
+            | Paralysis => updateCreaturesTurn(agent.creatureType, receiver, paralysis, Paralysis)
+            | RemoveParalysis => updateCreaturesTurn(agent.creatureType, receiver, paralysis, RemoveParalysis)
             | CreatesIlusion => updateCreaturesTurn(agent.creatureType, agent, activatedSkill, agent.skill)
             | WildShape => updateCreaturesTurn(agent.creatureType, agent, activatedSkill, agent.skill)
             | Blind => updateCreaturesTurn(agent.creatureType, agent, activatedSkill, agent.skill)
@@ -229,7 +233,7 @@ module rpgBattle {
 
                          {id: 4, rollResult: monster1D20, creatureType: Monster} //,
                          // {id: 5, rollResult: monster2D20, cretureType: Monster}
-                    )
+                        )
         
         listInitatives' = sortList(initatives, (x, y) => x.rollResult > y.rollResult)                                        
     }
