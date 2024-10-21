@@ -62,18 +62,24 @@ module rpgBattle {
 
     pure val CREATURES = Map(
 
-        1 -> {id: 1, name: "Presto", hp: 20, paralysis: false, skill: false ,creatureType: Wizard},
-        2 -> {id: 2, name: "Hank", hp: 20, paralysis: false, skill: false ,creatureType: Hunter},
-        3 -> {id: 3, name: "Bobby", hp: 20, paralysis: false, skill:false, creatureType: Druid},
+        1 -> {id: 1, name: "Presto (✨)", hp: 20, paralysis: false, skill: false ,creatureType: Wizard},
+        2 -> {id: 2, name: "Hank (🏹)", hp: 20, paralysis: false, skill: false ,creatureType: Hunter},
+        3 -> {id: 3, name: "Bobby (🌿)", hp: 20, paralysis: false, skill:false, creatureType: Druid},
 
         // Monsters
-        4 -> {id: 4, name: "Gelatinous Cube", hp: 100, paralysis: false, skill: false, creatureType: Monster},
-        5 -> {id: 5, name: "Venger", hp: 100, paralysis: false, skill: false, creatureType: Monster},
+        4 -> {id: 4, name: "Zumbi (🧟)", hp: 100, paralysis: false, skill: false, creatureType: Monster},
+        5 -> {id: 5, name: "Ogre (👹)", hp: 100, paralysis: false, skill: false, creatureType: Monster},
 
         // Animals
-        6 -> {id: 6, name: "Ilusion Sheep", hp: 1, paralysis: false, skill: false, creatureType: Sheep},
-        7 -> {id: 7, name:"Spectacled bear", hp: 60, paralysis: false, skill: false, creatureType: Bear}
+        6 -> {id: 6, name: "Ilusion Sheep (🐑)", hp: 1, paralysis: false, skill: false, creatureType: Sheep},
+        7 -> {id: 7, name:"Spectacled bear (🐻)", hp: 60, paralysis: false, skill: false, creatureType: Bear}
     )
+
+    // DAMAGE
+
+    val NO_DAMAGE = 0
+    val NORMAL_DAMAGE = 10
+    val MONSTER_DAMAGE = 20
 
     // STATUS VAR ROUND
     var creatures: int -> Creature
@@ -268,12 +274,12 @@ module rpgBattle {
         val hunter = creatures.get(CREATURES_ENUM.get("HUNTER"))
 
         if(hunter.skill)
-            attack(attacker, receiver, 0)
+            attack(attacker, receiver, NO_DAMAGE)
         else
             if(turn.num == 0)
-                attack(attacker, receiver, 10)
+                attack(attacker, receiver, NORMAL_DAMAGE)
             else
-                attack(attacker, receiver, 20)
+                attack(attacker, receiver, MONSTER_DAMAGE)
     }
 
 
@@ -360,7 +366,7 @@ module rpgBattle {
         else if(not(checksOthersHerosSkillsAreActivated(agent, creatures)))
             createIlusionSheep(agent)
         else
-            attack(agent, receiver, 10)
+            attack(agent, receiver, NORMAL_DAMAGE)
     }
 
     action hunterAction(agent: Creature, receiver: Creature): bool = {
@@ -369,7 +375,7 @@ module rpgBattle {
         else if(not(checksOthersHerosSkillsAreActivated(agent, creatures)))
             useBlindMonster(agent, receiver)
         else
-            attack(agent, receiver, 10)
+            attack(agent, receiver, NORMAL_DAMAGE)
     }
 
     action druidAction(agent: Creature, receiver: Creature): bool = {
@@ -378,7 +384,7 @@ module rpgBattle {
         else if(not(checksOthersHerosSkillsAreActivated(agent, creatures)))
            activateWildShape(agent)
         else
-            attack(agent, receiver, 10)
+            attack(agent, receiver, NORMAL_DAMAGE)
     }
 
     // SKIP
@@ -412,7 +418,7 @@ module rpgBattle {
                     | Wizard =>  wizardAction(agent, receiver)  
                     | Hunter => hunterAction(agent, receiver)
                     | Druid => druidAction(agent, receiver)
-                    | _ => attack(agent, receiver, 10)            
+                    | _ => attack(agent, receiver, NORMAL_DAMAGE)            
                 }
             else 
                 skipTurn(agent, receiver)

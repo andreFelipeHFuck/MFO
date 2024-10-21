@@ -62,18 +62,24 @@ module rpgBattle {
 
     pure val CREATURES = Map(
 
-        1 -> {id: 1, name: "Presto", hp: 20, paralysis: false, skill: false ,creatureType: Wizard},
-        2 -> {id: 2, name: "Hank", hp: 20, paralysis: false, skill: false ,creatureType: Hunter},
-        3 -> {id: 3, name: "Bobby", hp: 20, paralysis: false, skill:false, creatureType: Druid},
+        1 -> {id: 1, name: "Presto (✨)", hp: 20, paralysis: false, skill: false ,creatureType: Wizard},
+        2 -> {id: 2, name: "Hank (🏹)", hp: 20, paralysis: false, skill: false ,creatureType: Hunter},
+        3 -> {id: 3, name: "Bobby (🌿)", hp: 20, paralysis: false, skill:false, creatureType: Druid},
 
         // Monsters
-        4 -> {id: 4, name: "Gelatinous Cube", hp: 100, paralysis: false, skill: false, creatureType: Monster},
-        // 5 -> {id: 5, name: "Venger", hp: 100, paralysis: false, skill: false, creatureType: Monster},
+        4 -> {id: 4, name: "Zumbi (🧟)", hp: 100, paralysis: false, skill: false, creatureType: Monster},
+        // 5 -> {id: 5, name: "Ogre (👹)", hp: 100, paralysis: false, skill: false, creatureType: Monster},
 
         // Animals
-        6 -> {id: 6, name: "Ilusion Sheep", hp: 1, paralysis: false, skill: false, creatureType: Sheep},
-        7 -> {id: 7, name:"Spectacled bear", hp: 60, paralysis: false, skill: false, creatureType: Bear}
+        6 -> {id: 6, name: "Ilusion Sheep (🐑)", hp: 1, paralysis: false, skill: false, creatureType: Sheep},
+        7 -> {id: 7, name:"Spectacled bear (🐻)", hp: 60, paralysis: false, skill: false, creatureType: Bear}
     )
+
+    // DAMAGE
+
+    val NO_DAMAGE = 0
+    val NORMAL_DAMAGE = 10
+    val MONSTER_DAMAGE = 20
 
     // STATUS VAR ROUND
     var creatures: int -> Creature
@@ -227,12 +233,12 @@ module rpgBattle {
         // nondet monster2D20 = 1.to(20).oneOf()
 
         val initatives = List(
-                         {id: 1, rollResult: wizardD20, creatureType: Wizard}, 
-                         {id: 2, rollResult: hunterD20, creatureType: Hunter},
-                         {id: 3, rollResult: druidD20, creatureType: Druid},
+                         {id: CREATURES_ENUM.get("WIZARD"), rollResult: wizardD20, creatureType: Wizard}, 
+                         {id: CREATURES_ENUM.get("HUNTER"), rollResult: hunterD20, creatureType: Hunter},
+                         {id: CREATURES_ENUM.get("DRUID"), rollResult: druidD20, creatureType: Druid},
 
-                         {id: 4, rollResult: monster1D20, creatureType: Monster} //,
-                         // {id: 5, rollResult: monster2D20, cretureType: Monster}
+                         {id: CREATURES_ENUM.get("MONSTER1"), rollResult: monster1D20, creatureType: Monster} //,
+                         // {id: CREATURES_ENUM.get("MONSTER2"), rollResult: monster2D20, cretureType: Monster}
                         )
         
         listInitatives' = sortList(initatives, (x, y) => x.rollResult > y.rollResult)                                        
@@ -259,12 +265,12 @@ module rpgBattle {
         val hunter = creatures.get(CREATURES_ENUM.get("HUNTER"))
 
         if(hunter.skill)
-            attack(attacker, receiver, 0)
+            attack(attacker, receiver, NO_DAMAGE)
         else
             if(turn.num == 0)
-                attack(attacker, receiver, 10)
+                attack(attacker, receiver, NORMAL_DAMAGE)
             else
-                attack(attacker, receiver, 20)
+                attack(attacker, receiver, MONSTER_DAMAGE)
     }
 
 
@@ -348,13 +354,13 @@ module rpgBattle {
     action wizardAction(agent: Creature, receiver: Creature): bool = {
         if (choiseRemoveParalyisisCreature(agent, creatures).size() > 0)
             any {
-                attack(agent, receiver, 10),
+                attack(agent, receiver, NORMAL_DAMAGE),
                 createIlusionSheep(agent),
                 removeParalysisCreature(agent)
             }
         else 
             any {
-                attack(agent, receiver, 10),
+                attack(agent, receiver, NORMAL_DAMAGE),
                 createIlusionSheep(agent),
             }
     }
@@ -362,28 +368,28 @@ module rpgBattle {
     action hunterAction(agent: Creature, receiver: Creature): bool = {
         if (choiseRemoveParalyisisCreature(agent, creatures).size() > 0)
             any {
-                attack(agent, receiver, 10),
+                attack(agent, receiver, NORMAL_DAMAGE),
                 useBlindMonster(agent, receiver),
                 removeParalysisCreature(agent)
             }
         else 
             any {
                 useBlindMonster(agent, receiver),
-                attack(agent, receiver, 10)
+                attack(agent, receiver, NORMAL_DAMAGE)
             }
     }
 
     action druidAction(agent: Creature, receiver: Creature): bool = {
         if (choiseRemoveParalyisisCreature(agent, creatures).size() > 0)
             any {
-                attack(agent, receiver, 10),
+                attack(agent, receiver, NORMAL_DAMAGE),
                 activateWildShape(agent),
                 removeParalysisCreature(agent)
             }
         else 
             any {
                 activateWildShape(agent),
-                attack(agent, receiver, 10),
+                attack(agent, receiver, NORMAL_DAMAGE),
             }
     }
 
@@ -418,7 +424,7 @@ module rpgBattle {
                     | Wizard =>  wizardAction(agent, receiver)  
                     | Hunter => hunterAction(agent, receiver)
                     | Druid => druidAction(agent, receiver)
-                    | _ => attack(agent, receiver, 10)            
+                    | _ => attack(agent, receiver, NORMAL_DAMAGE)            
                 }
             else 
                 skipTurn(agent, receiver)
