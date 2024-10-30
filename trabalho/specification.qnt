@@ -211,7 +211,9 @@ module rpgBattle {
             | CreatesIlusion => updateCreaturesTurn(agent.creatureType, agent, activatedSkill, agent.skill)
             | WildShape => updateCreaturesTurn(agent.creatureType, agent, activatedSkill, agent.skill)
             | Blind => updateCreaturesTurn(agent.creatureType, agent, activatedSkill, agent.skill)
+            | Skip => updateCreaturesTurn(agent.creatureType, receiver, paralysis, RemoveParalysis)
             | _ => creatures' = creatures
+
         }
     }
 
@@ -565,7 +567,7 @@ module rpgBattle {
 
     // INV HEROS NOT DIE
     val inv_heros_not_die = creatures.values().exists(c => c.creatureType == Wizard and c.hp > 0)
-                            or creatures.values().exists(c => c.creatureType == Hunter and c.hp > 0)
-                            or creatures.values().exists(c => c.creatureType == Druid and c.hp > 0)
+                            and creatures.values().exists(c => c.creatureType == Hunter and c.hp > 0)
+                            and creatures.values().exists(c => c.creatureType == Druid and c.hp > 0)
 
 }

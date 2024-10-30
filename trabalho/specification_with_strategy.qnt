@@ -517,7 +517,7 @@ module rpgBattle {
     // INV COMBAT
 
     // HEROS LOSE
-    val inv_heros_lose = creatures.values().exists(
+    val inv_heroes_lose = creatures.values().exists(
                                                 c => c.creatureType == Wizard
                                                 or c.creatureType == Hunter
                                                 or c.creatureType == Druid
@@ -530,7 +530,7 @@ module rpgBattle {
                         or creatures.values().forall(c => c.creatureType == Druid implies c.hp > 0)
                                         
     // HEROS WIN
-    val inv_heros_win =  creatures.values().exists(
+    val inv_heroes_win =  creatures.values().exists(
                                                 c => c.creatureType == Wizard
                                                 or c.creatureType == Hunter
                                                 or c.creatureType == Druid
@@ -544,8 +544,8 @@ module rpgBattle {
     val inv_monster_not_die = creatures.values().exists(c => c.creatureType == Monster and c.hp > 0)
 
     // INV HEROS NOT DIE
-    val inv_heros_not_die = creatures.values().exists(c => c.creatureType == Wizard and c.hp > 0)
-                            or creatures.values().exists(c => c.creatureType == Hunter and c.hp > 0)
-                            or creatures.values().exists(c => c.creatureType == Druid and c.hp > 0)
+    val inv_heroes_not_die = creatures.values().exists(c => c.creatureType == Wizard and c.hp > 0)
+                            and creatures.values().exists(c => c.creatureType == Hunter and c.hp > 0)
+                            and creatures.values().exists(c => c.creatureType == Druid and c.hp > 0)
 
 }
