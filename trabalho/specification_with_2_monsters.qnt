@@ -62,6 +62,7 @@ module rpgBattle {
 
     pure val CREATURES = Map(
 
+        // Heros
         1 -> {id: 1, name: "Presto (✨)", hp: 20, paralysis: false, skill: false ,creatureType: Wizard},
         2 -> {id: 2, name: "Hank (🏹)", hp: 20, paralysis: false, skill: false ,creatureType: Hunter},
         3 -> {id: 3, name: "Bobby (🌿)", hp: 20, paralysis: false, skill:false, creatureType: Druid},
@@ -72,7 +73,7 @@ module rpgBattle {
 
         // Animals
         6 -> {id: 6, name: "Ilusion Sheep (🐑)", hp: 1, paralysis: false, skill: false, creatureType: Sheep},
-        7 -> {id: 7, name:"Spectacled bear (🐻)", hp: 60, paralysis: false, skill: false, creatureType: Bear}
+        7 -> {id: 7, name:"Spectacled Bear (🐻)", hp: 60, paralysis: false, skill: false, creatureType: Bear}
     )
 
     // DAMAGE
@@ -307,6 +308,7 @@ module rpgBattle {
             agent != receiver,
             agent.hp > 0,
             receiver.hp > 0, 
+            agent.paralysis != true,
 
             updateCreatures(agent, receiver, RemoveParalysis), 
             status' = Action({
