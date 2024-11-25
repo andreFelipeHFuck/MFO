@@ -68,6 +68,25 @@ BankState bank_state_from_json(json state) {
   return {.balances = balances, .investments = investments, .next_id = next_id};
 }
 
+
+void print_bank_state(BankState &bank_state) {
+  cout << "Balances: " << endl;
+  for (auto [k, v]: bank_state.balances) {
+      cout << "\t" << k << "->" << v << endl;
+  }
+
+  cout << "Investments: " << endl;
+  for (auto [k, v]: bank_state.investments) {
+      cout << "\t" << k << "-> {" << endl;
+      cout << "\t\t" << "Owner: " << v.owner << endl;
+      cout << "\t\t" << "Amount: " << v.amount << endl;
+  }
+
+  cout << "Next ID: " << bank_state.next_id << endl;
+}
+
+
+
 int main() {
   for (int i = 0; i < 10000; i++) {
     cout << "Trace #" << i << endl;
@@ -94,26 +113,45 @@ int main() {
       case Action::Deposit: {
         string depositor = nondet_picks["depositor"]["value"];
         int amount = int_from_json(nondet_picks["amount"]["value"]);
-        cout << "TODO: chamar a função correspondente" << endl;
+        cout << "deposit_action(" << state << "," << depositor << "," << amount << ")" << endl;
+        error = deposit(bank_state, depositor, amount);
         break;
       }
       default: {
+        cout << endl;
         cout << "TODO: fazer a conexão para as outras ações. Ação: " << action
              << endl;
+        cout << endl;
         error = "";
         break;
       }
       }
 
       BankState expected_bank_state = bank_state_from_json(state["bank_state"]);
-
-      cout << "TODO: comparar o estado esperado com o estado obtido" << endl;
-
       string expected_error = string(state["error"]["tag"]).compare("Some") == 0
                                   ? state["error"]["value"]
                                   : "";
 
-      cout << "TODO: comparar o erro esperado com o erro obtido" << endl;
+      cout << "-------------------- Expected --------------------------------"
+           << endl;
+
+      print_bank_state(expected_bank_state);
+      cout << "Error: " << expected_error << endl;
+
+      cout << "-------------------- Actual ----------------------------------"
+           << endl;
+      
+      print_bank_state(bank_state);
+      cout << "Error: " << error << endl;
+
+      cout << "--------------------------------------------------------------"
+           << endl;
+      cout << endl;
+
+      // assert(state == expected_bank_state);
+      assert(error == expected_error);
+
+
     }
   }
   return 0;
