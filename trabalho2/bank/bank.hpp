@@ -43,7 +43,9 @@ string transfer(BankState &bank_state, string sender, string receiver,
 }
 
 string buy_investment(BankState &bank_state, string buyer, int amount) {
-  if(bank_state.balances[buyer] < amount){
+  if (amount <= 0){
+    return "Amount should be greater than zero";
+  }else if(bank_state.balances[buyer] < amount){
     return "Balance is too low";
   }else{
     bank_state.balances[buyer] -= amount;
