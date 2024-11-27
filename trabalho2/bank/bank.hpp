@@ -32,11 +32,12 @@ string transfer(BankState &bank_state, string sender, string receiver,
                 int amount) {
   if (amount <= 0) {
     return "Amount should be greater than zero";
-  }else{
+  } else if (bank_state.balances[sender] < amount) {
+    return "Balance is too low";
+  } else {
     bank_state.balances[sender] -= amount;
     bank_state.balances[receiver] += amount;
     return "";
-
   }
 
 }
