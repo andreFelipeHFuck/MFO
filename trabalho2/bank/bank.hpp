@@ -25,9 +25,15 @@ string withdraw(BankState &bank_state, string withdrawer, int amount) {
 
 string transfer(BankState &bank_state, string sender, string receiver,
                 int amount) {
-  bank_state.balances[sender] -= amount;
-  bank_state.balances[receiver] += amount;
-  return "";
+  if (amount <= 0) {
+    return "Amount should be greater than zero";
+  }else{
+    bank_state.balances[sender] -= amount;
+    bank_state.balances[receiver] += amount;
+    return "";
+
+  }
+
 }
 
 string buy_investment(BankState &bank_state, string buyer, int amount) {
