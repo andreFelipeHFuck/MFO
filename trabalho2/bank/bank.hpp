@@ -31,10 +31,14 @@ string transfer(BankState &bank_state, string sender, string receiver,
 }
 
 string buy_investment(BankState &bank_state, string buyer, int amount) {
-  bank_state.balances[buyer] -= amount;
-  bank_state.investments[bank_state.next_id] = {buyer, amount};
-  bank_state.next_id++;
-  return "";
+  if(bank_state.balances[buyer] < amount){
+    return "Balance is too low";
+  }else{
+    bank_state.balances[buyer] -= amount;
+    bank_state.investments[bank_state.next_id] = {buyer, amount};
+    bank_state.next_id++;
+    return "";
+  }
 }
 
 string sell_investment(BankState &bank_state, string seller,
