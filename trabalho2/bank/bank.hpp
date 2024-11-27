@@ -66,7 +66,13 @@ string sell_investment(BankState &bank_state, string seller,
   if(bank_state.investments.count(investment_id) == 0){
     return "No investment with this id";
   }else{
-    bank_state.balances[seller] += bank_state.investments[investment_id].amount;
-    return "";
+    Investment investment = bank_state.investments[investment_id];
+    if(investment.owner != seller) {
+      return "Seller can't sell an investment they don't own";
+    } else {
+      bank_state.balances[seller] += bank_state.investments[investment_id].amount;
+      bank_state.investments.erase(investment_id);
+      return "";
+    }
   }
 }
