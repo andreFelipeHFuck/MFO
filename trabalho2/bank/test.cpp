@@ -80,6 +80,7 @@ void print_bank_state(BankState &bank_state) {
       cout << "\t" << k << "-> {" << endl;
       cout << "\t\t" << "Owner: " << v.owner << endl;
       cout << "\t\t" << "Amount: " << v.amount << endl;
+      cout << "\t" << "}" << endl;
   }
 
   cout << "Next ID: " << bank_state.next_id << endl;
@@ -113,10 +114,70 @@ int main() {
       case Action::Deposit: {
         string depositor = nondet_picks["depositor"]["value"];
         int amount = int_from_json(nondet_picks["amount"]["value"]);
-        cout << "deposit_action(" << state << "," << depositor << "," << amount << ")" << endl;
+        cout << "deposit_action(" << endl; 
+
+        cout << endl;
+        print_bank_state(bank_state);
+        cout << endl;
+
+        cout << "," << depositor << "," << amount << ")" << endl;
         error = deposit(bank_state, depositor, amount);
         break;
+      }  
+      case Action::Withdraw: {
+        string withdrawer = nondet_picks["withdrawer"]["value"];
+        int amount = int_from_json(nondet_picks["amount"]["value"]);
+        cout << "withdraw(" << endl;
+
+        cout << endl;
+        print_bank_state(bank_state);
+        cout << endl;
+
+        cout << ", " << withdrawer  << ", " << amount << ")" << endl;
+        error = withdraw(bank_state, withdrawer, amount);
+        break;
       }
+      case Action::Transfer: {
+        string sender = nondet_picks["sender"]["value"];
+        string receiver = nondet_picks["receiver"]["value"];
+        int amount = int_from_json(nondet_picks["amount"]["value"]);
+        cout << "transfer(" << endl;
+
+        cout << endl;
+        print_bank_state(bank_state);
+        cout << endl;
+
+        cout << ", " << sender << ", " << receiver << ", " << amount << ")" << endl;
+        error = transfer(bank_state, sender, receiver, amount);
+        break;
+      }
+      case Action::BuyInvestment: {
+        string buyer = nondet_picks["buyer"]["value"];
+        int amount = int_from_json(nondet_picks["amount"]["value"]);
+        cout << "buy_investment(" << endl;
+
+        cout << endl;
+        print_bank_state(bank_state);
+        cout << endl;
+
+        cout << ", " << buyer << ", " << amount << ")" << endl;
+        error = buy_investment(bank_state, buyer, amount);
+        break;
+      }
+      case Action::SellInvestment: {
+        string seller = nondet_picks["seller"]["value"];
+        int investment_id = int_from_json(nondet_picks["id"]["value"]);
+        cout << "sell_investment(" << endl;
+
+        cout << endl;
+        print_bank_state(bank_state);
+        cout << endl;
+
+        cout << ", " << seller << ", " << investment_id << ")" << endl;
+        error = sell_investment(bank_state, seller, investment_id);
+        break;
+      }
+
       default: {
         cout << endl;
         cout << "TODO: fazer a conexão para as outras ações. Ação: " << action
